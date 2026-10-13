@@ -1,4 +1,3 @@
-
 package com.gamage.backend.entity;
 
 import jakarta.persistence.*;
@@ -20,8 +19,23 @@ public class Course {
 
     public Course() {}
 
+    public Course(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public Course(Long id, String name, String description) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+    }
+
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {

@@ -41,7 +41,29 @@ export default function CoursesPage() {
     }
 
     useEffect(() => {
-        void loadCourses();
+        let isMounted = true;
+        fetch(API_URL, { cache: "no-store" })
+            .then((res) => {
+                if (!res.ok) throw new Error("Failed to load courses");
+                return res.json();
+            })
+            .then((data: Course[]) => {
+                if (isMounted) {
+                    setCourses(data);
+                    setError("");
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setError("Cannot load courses from backend.");
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     function resetForm() {

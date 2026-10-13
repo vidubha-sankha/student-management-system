@@ -66,7 +66,36 @@ export default function Home() {
   }
 
   useEffect(() => {
-    void fetchData();
+    let isMounted = true;
+    Promise.all([
+      fetch(`${API_URL}/students`, { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch students");
+        return r.json();
+      }),
+      fetch(`${API_URL}/courses`, { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch courses");
+        return r.json();
+      }),
+    ])
+      .then(([studentsData, coursesData]: [Student[], Course[]]) => {
+        if (isMounted) {
+          setStudents(studentsData);
+          setCourses(coursesData);
+          setError("");
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error(err);
+          setError("Cannot connect to backend.");
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function resetForm() {
@@ -108,12 +137,13 @@ export default function Home() {
         (course) => course.id === Number(courseId)
       );
 
+      const resolvedCourseId = selectedCourse ? selectedCourse.id : null;
+
       const studentData = {
         name: name.trim(),
         email: email.trim(),
-        course: selectedCourse
-          ? { id: selectedCourse.id }
-          : null,
+        courseId: resolvedCourseId,
+        course: resolvedCourseId ? { id: resolvedCourseId } : null,
       };
 
       const isEditing = editingId !== null;

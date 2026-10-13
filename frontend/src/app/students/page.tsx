@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,29 +17,81 @@ export default function StudentsPage() {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [message, setMessage] = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    async function fetchStudents() {
+        try {
+            const response = await fetch(
+                "http://localhost:8080/api/students",
+                { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch students");
+            }
+
+            const data: Student[] = await response.json();
+            setStudents(data);
+            setError("");
+        } catch {
+            setError("Unable to load students.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     useEffect(() => {
-        async function fetchStudents() {
-            try {
-                const response = await fetch(
-                    "http://localhost:8080/api/students"
-                );
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch students");
+        let isMounted = true;
+        fetch("http://localhost:8080/api/students", { cache: "no-store" })
+            .then((res) => {
+                if (!res.ok) throw new Error("Failed to fetch students");
+                return res.json();
+            })
+            .then((data: Student[]) => {
+                if (isMounted) {
+                    setStudents(data);
+                    setError("");
+                    setLoading(false);
                 }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setError("Unable to load students.");
+                    setLoading(false);
+                }
+            });
 
-                const data: Student[] = await response.json();
-                setStudents(data);
-            } catch {
-                setError("Unable to load students.");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchStudents();
+        return () => {
+            isMounted = false;
+        };
     }, []);
+
+    async function deleteStudent(student: Student) {
+        if (!window.confirm(`Delete ${student.name}?`)) return;
+
+        setDeletingId(student.id);
+        setError("");
+        setMessage("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:8080/api/students/${student.id}`,
+                { method: "DELETE" }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to delete student");
+            }
+
+            setMessage(`Student "${student.name}" deleted successfully.`);
+            await fetchStudents();
+        } catch {
+            setError("Failed to delete student.");
+        } finally {
+            setDeletingId(null);
+        }
+    }
 
     return (
         <main
@@ -54,11 +105,13 @@ export default function StudentsPage() {
                 ← Back to Dashboard
             </Link>
 
-            <h1 style={{ marginTop: "25px", fontSize: "32px" }}>
+            <h1 style={{ marginTop: "25px", fontSize: "32px", fontWeight: 700 }}>
                 Student Management
             </h1>
 
-            <p>Manage all students in the system.</p>
+            <p style={{ color: "#64748b", marginTop: "6px" }}>
+                Manage all students in the system.
+            </p>
 
             <div
                 style={{
@@ -67,6 +120,7 @@ export default function StudentsPage() {
                     borderRadius: "12px",
                     marginTop: "30px",
                     overflowX: "auto",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                 }}
             >
                 <div
@@ -96,9 +150,13 @@ export default function StudentsPage() {
                     </Link>
                 </div>
 
+                {message && (
+                    <p role="status" style={{ color: "green", marginBottom: 12 }}>
+                        {message}
+                    </p>
+                )}
                 {loading && <p>Loading students...</p>}
-
-                {error && <p style={{ color: "red" }}>{error}</p>}
+                {error && <p role="alert" style={{ color: "red" }}>{error}</p>}
 
                 {!loading && !error && (
                     <table
@@ -114,6 +172,7 @@ export default function StudentsPage() {
                                 <th style={thStyle}>Name</th>
                                 <th style={thStyle}>Email</th>
                                 <th style={thStyle}>Course</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
                         </thead>
 
@@ -125,6 +184,25 @@ export default function StudentsPage() {
                                     <td style={tdStyle}>{student.email}</td>
                                     <td style={tdStyle}>
                                         {student.course?.name ?? "No Course"}
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <button
+                                            type="button"
+                                            onClick={() => deleteStudent(student)}
+                                            disabled={deletingId === student.id}
+                                            style={{
+                                                padding: "6px 12px",
+                                                background: "#dc2626",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontWeight: 600,
+                                                fontSize: "13px",
+                                            }}
+                                        >
+                                            {deletingId === student.id ? "Deleting..." : "Delete"}
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
