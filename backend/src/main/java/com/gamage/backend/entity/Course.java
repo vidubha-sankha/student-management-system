@@ -2,6 +2,7 @@
 package com.gamage.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "courses")
@@ -11,6 +12,7 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Course name is required")
     @Column(nullable = false)
     private String name;
 

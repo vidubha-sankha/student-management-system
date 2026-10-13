@@ -3,8 +3,10 @@ package com.gamage.backend.controller;
 
 import com.gamage.backend.entity.Course;
 import com.gamage.backend.repository.CourseRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -27,22 +29,22 @@ public class CourseController {
     @GetMapping("/{id}")
     public Course getCourseById(@PathVariable Long id) {
         return courseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Course not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Course createCourse(@RequestBody Course course) {
+    public Course createCourse(@Valid @RequestBody Course course) {
         return courseRepository.save(course);
     }
 
     @PutMapping("/{id}")
     public Course updateCourse(
             @PathVariable Long id,
-            @RequestBody Course updatedCourse) {
+            @Valid @RequestBody Course updatedCourse) {
 
         Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Course not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
 
         course.setName(updatedCourse.getName());
         course.setDescription(updatedCourse.getDescription());
@@ -54,7 +56,7 @@ public class CourseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCourse(@PathVariable Long id) {
         if (!courseRepository.existsById(id)) {
-            throw new RuntimeException("Course not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found");
         }
 
         courseRepository.deleteById(id);

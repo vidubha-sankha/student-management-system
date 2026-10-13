@@ -3,9 +3,10 @@ package com.gamage.backend.controller;
 
 import com.gamage.backend.entity.Student;
 import com.gamage.backend.repository.StudentRepository;
-
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -16,44 +17,31 @@ public class StudentController {
 
     private final StudentRepository studentRepository;
 
-    // Constructor
-    public StudentController(
-            StudentRepository studentRepository) {
+    public StudentController(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
     }
 
-    // 1. GET - Get all students
     @GetMapping
     public List<Student> getAllStudents() {
         return studentRepository.findAll();
     }
 
-    // 2. GET - Get student by ID
     @GetMapping("/{id}")
-    public Student getStudentById(
-            @PathVariable Long id) {
-
+    public Student getStudentById(@PathVariable Long id) {
         return studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
     }
 
-    // 3. POST - Create new student
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Student createStudent(
-            @RequestBody Student student) {
-
+    public Student createStudent(@Valid @RequestBody Student student) {
         return studentRepository.save(student);
     }
 
-    // 4. PUT - Update student
     @PutMapping("/{id}")
-    public Student updateStudent(
-            @PathVariable Long id,
-            @RequestBody Student updatedStudent) {
-
+    public Student updateStudent(@PathVariable Long id, @Valid @RequestBody Student updatedStudent) {
         Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
         student.setName(updatedStudent.getName());
         student.setEmail(updatedStudent.getEmail());
@@ -62,14 +50,11 @@ public class StudentController {
         return studentRepository.save(student);
     }
 
-    // 5. DELETE - Delete student
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteStudent(
-            @PathVariable Long id) {
-
+    public void deleteStudent(@PathVariable Long id) {
         if (!studentRepository.existsById(id)) {
-            throw new RuntimeException("Student not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
         }
 
         studentRepository.deleteById(id);
