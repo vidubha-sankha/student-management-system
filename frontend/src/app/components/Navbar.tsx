@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Navbar.module.css";
 
+import GraduationCapIcon from "./GraduationCapIcon";
+
 export default function Navbar() {
 
     const pathname = usePathname();
@@ -38,7 +40,7 @@ export default function Navbar() {
                         className={styles.brandIcon}
                         aria-hidden="true"
                     >
-                        ✦
+                        <GraduationCapIcon size={22} />
                     </span>
 
                     <span className={styles.brandText}>

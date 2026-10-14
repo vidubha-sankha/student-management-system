@@ -5,6 +5,9 @@ import Navbar from "./components/Navbar";
 export const metadata: Metadata = {
   title: "Student Management System",
   description: "Comprehensive portal for managing students and academic courses.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
