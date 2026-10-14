@@ -1,6 +1,8 @@
 package com.gamage.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -17,7 +19,20 @@ public record StudentRequestDTO(
     CourseRef course
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CourseRef(Long id) {}
+    public record CourseRef(@JsonProperty("id") Long id) {}
+
+    @JsonCreator
+    public StudentRequestDTO(
+        @JsonProperty("name") String name,
+        @JsonProperty("email") String email,
+        @JsonProperty("courseId") Long courseId,
+        @JsonProperty("course") CourseRef course
+    ) {
+        this.name = name;
+        this.email = email;
+        this.courseId = courseId;
+        this.course = course;
+    }
 
     public StudentRequestDTO(String name, String email, Long courseId) {
         this(name, email, courseId, null);

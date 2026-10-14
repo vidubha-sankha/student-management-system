@@ -35,9 +35,9 @@ export default function Home() {
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function fetchData() {
+  async function fetchData(showLoading = false) {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError("");
 
       const [studentsResponse, coursesResponse] =
@@ -137,13 +137,12 @@ export default function Home() {
         (course) => course.id === Number(courseId)
       );
 
-      const resolvedCourseId = selectedCourse ? selectedCourse.id : null;
-
       const studentData = {
         name: name.trim(),
         email: email.trim(),
-        courseId: resolvedCourseId,
-        course: resolvedCourseId ? { id: resolvedCourseId } : null,
+        course: selectedCourse
+          ? { id: selectedCourse.id }
+          : null,
       };
 
       const isEditing = editingId !== null;
@@ -434,7 +433,7 @@ export default function Home() {
                             disabled={deletingId !== null || saving}
                             style={{
                               ...actionButtonStyle,
-                              background: "#2563eb",
+                              background: "#eef2ff", color: "#4338ca",
                             }}
                           >
                             Edit
@@ -445,7 +444,7 @@ export default function Home() {
                             disabled={deletingId !== null || saving}
                             style={{
                               ...actionButtonStyle,
-                              background: "#dc2626",
+                              background: "#fef2f2", color: "#b91c1c",
                             }}
                           >
                             {deletingId === student.id
