@@ -1,12 +1,11 @@
 # Environment variables
-.env
-.env.*
 !.env.example
 
 # IDE / OS
 .idea/
-.vscode/
 *.swp
 *.swo
 .DS_Store
 Thumbs.db
+config.bat
+node_modules
