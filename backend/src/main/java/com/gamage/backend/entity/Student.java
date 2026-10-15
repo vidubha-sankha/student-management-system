@@ -17,14 +17,26 @@ public class Student {
     private String name;
 
     @Email
+    @NotBlank
     @Column(nullable = false, unique = true)
     private String email;
 
+    // Student belongs to a course
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
 
-    public Student() {}
+    // Student linked to login account
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private AppUser user;
+
+    // Student profile picture URL
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+
+    public Student() {
+    }
 
     public Student(String name, String email, Course course) {
         this.name = name;
@@ -69,5 +81,21 @@ public class Student {
 
     public void setCourse(Course course) {
         this.course = course;
+    }
+
+    public AppUser getUser() {
+        return user;
+    }
+
+    public void setUser(AppUser user) {
+        this.user = user;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
     }
 }

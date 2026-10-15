@@ -3,17 +3,13 @@ package com.gamage.backend.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,108 +19,126 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            JwtAuthenticationFilter jwtFilter) throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        JwtAuthenticationFilter jwtFilter) throws Exception {
 
-        http
-                .cors(Customizer.withDefaults())
+                http
+                                .cors(Customizer.withDefaults())
 
-                .csrf(csrf -> csrf.disable())
+                                .csrf(csrf -> csrf.disable())
 
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS))
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
 
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(
-                                (request, response, authException) -> response.sendError(
-                                        HttpStatus.UNAUTHORIZED.value()))
-                        .accessDeniedHandler(
-                                (request, response, accessDeniedException) -> response.sendError(
-                                        HttpStatus.FORBIDDEN.value())))
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint(
+                                                                (request, response, authException) -> response
+                                                                                .sendError(
+                                                                                                HttpStatus.UNAUTHORIZED
+                                                                                                                .value()))
+                                                .accessDeniedHandler(
+                                                                (request, response, accessDeniedException) -> response
+                                                                                .sendError(
+                                                                                                HttpStatus.FORBIDDEN
+                                                                                                                .value())))
 
-                .authorizeHttpRequests(auth -> auth
+                                .authorizeHttpRequests(auth -> auth
 
-                        // Public authentication endpoints
-                        .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login")
-                        .permitAll()
+                                                // Public registration and login
+                                                .requestMatchers(
+                                                                "/api/auth/register",
+                                                                "/api/auth/login")
+                                                .permitAll()
 
-                        // Allow browser CORS preflight requests
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.OPTIONS,
-                                "/**")
-                        .permitAll()
+                                                // Allow CORS preflight requests
+                                                .requestMatchers(
+                                                                HttpMethod.OPTIONS,
+                                                                "/**")
+                                                .permitAll()
 
-                        // Admin-only write operations
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.POST,
-                                "/api/students",
-                                "/api/courses")
-                        .hasRole("ADMIN")
+                                                // ADMIN ONLY: Create students and courses
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/students",
+                                                                "/api/courses")
+                                                .hasRole("ADMIN")
 
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.PUT,
-                                "/api/students/**",
-                                "/api/courses/**")
-                        .hasRole("ADMIN")
+                                                // ADMIN ONLY: Update students and courses
+                                                .requestMatchers(
+                                                                HttpMethod.PUT,
+                                                                "/api/students/**",
+                                                                "/api/courses/**")
+                                                .hasRole("ADMIN")
 
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.DELETE,
-                                "/api/students/**",
-                                "/api/courses/**")
-                        .hasRole("ADMIN")
+                                                // ADMIN ONLY: Delete students and courses
+                                                .requestMatchers(
+                                                                HttpMethod.DELETE,
+                                                                "/api/students/**",
+                                                                "/api/courses/**")
+                                                .hasRole("ADMIN")
 
-                        // Admin-only student records
-                        .requestMatchers("/api/students/**")
-                        .hasRole("ADMIN")
+                                                // ADMIN ONLY: Manage student records
+                                                .requestMatchers("/api/students/**")
+                                                .hasRole("ADMIN")
 
-                        // Authenticated users can read courses
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.GET,
-                                "/api/courses/**")
-                        .authenticated()
+                                                // PUBLIC: Read courses without login
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/courses",
+                                                                "/api/courses/**")
+                                                .permitAll()
 
-                        // Everything else requires authentication
-                        .anyRequest().authenticated())
+                                                // STUDENT ONLY: Student profile and features
+                                                .requestMatchers("/api/student/**")
+                                                .hasRole("STUDENT")
 
-                .addFilterBefore(
-                        jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                                                // Allow Spring Boot error responses
+                                                .requestMatchers("/error")
+                                                .permitAll()
 
-        return http.build();
-    }
+                                                // All other endpoints require authentication
+                                                .anyRequest()
+                                                .authenticated())
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+                                .addFilterBefore(
+                                                jwtFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-        CorsConfiguration configuration = new CorsConfiguration();
+                return http.build();
+        }
 
-        configuration.setAllowedOriginPatterns(
-                List.of(
-                        "http://localhost:[*]",
-                        "http://127.0.0.1:[*]"));
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
 
-        configuration.setAllowedMethods(
-                List.of(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "DELETE",
-                        "OPTIONS",
-                        "PATCH"));
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+                configuration.setAllowedOriginPatterns(
+                                List.of(
+                                                "http://localhost:[*]",
+                                                "http://127.0.0.1:[*]"));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                configuration.setAllowedMethods(
+                                List.of(
+                                                "GET",
+                                                "POST",
+                                                "PUT",
+                                                "DELETE",
+                                                "OPTIONS",
+                                                "PATCH"));
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration);
+                configuration.setAllowedHeaders(
+                                List.of("*"));
 
-        return source;
-    }
+                configuration.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+                source.registerCorsConfiguration(
+                                "/**",
+                                configuration);
+
+                return source;
+        }
 }

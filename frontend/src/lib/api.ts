@@ -1,39 +1,62 @@
+
 import { getToken } from "./auth";
 
-const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8080";
+
+type ApiOptions = RequestInit & {
+    skipAuth?: boolean;
+};
 
 export async function apiFetch(
     endpoint: string,
-    options: RequestInit = {}
+    options: ApiOptions = {}
 ) {
-    const token = getToken();
+    const { skipAuth = false, ...fetchOptions } = options;
 
-    const headers = new Headers(options.headers);
+    const headers = new Headers(fetchOptions.headers);
 
-    if (options.body && !headers.has("Content-Type")) {
+    if (
+        fetchOptions.body &&
+        !headers.has("Content-Type") &&
+        !(fetchOptions.body instanceof FormData)
+    ) {
         headers.set("Content-Type", "application/json");
     }
 
-    if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
+    if (!skipAuth) {
+        const token = getToken();
+
+        if (token) {
+            headers.set("Authorization", `Bearer ${token}`);
+        }
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers,
-        cache: "no-store",
-    });
+    const response = await fetch(
+        `${API_URL}${endpoint}`,
+        {
+            ...fetchOptions,
+            headers,
+            cache: "no-store",
+        }
+    );
 
     if (response.status === 401) {
-        throw new Error("401 Unauthorized - Please login");
+        throw new Error("Unauthorized. Please login.");
+    }
+
+    if (response.status === 403) {
+        throw new Error("Access denied.");
     }
 
     if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
     }
 
-    if (response.status === 204) return null;
+    if (response.status === 204) {
+        return null;
+    }
 
     return response.json();
 }

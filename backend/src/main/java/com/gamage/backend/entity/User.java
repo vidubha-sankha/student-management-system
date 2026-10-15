@@ -1,4 +1,3 @@
-
 package com.gamage.backend.entity;
 
 import jakarta.persistence.*;
@@ -21,7 +20,7 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String role = "USER";
+    private String role = "STUDENT";
 
     public User() {}
 

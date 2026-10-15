@@ -1,4 +1,3 @@
-
 package com.gamage.backend.entity;
 
 import jakarta.persistence.*;

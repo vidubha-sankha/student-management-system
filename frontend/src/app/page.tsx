@@ -1,162 +1,257 @@
 
-
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { saveToken } from "@/lib/auth";
-import GraduationCapIcon from "./components/GraduationCapIcon";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
-export default function LoginPage() {
+type Course = {
+  id: number;
+  name: string;
+  description?: string;
+};
+
+export default function StudentRegisterPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    courseId: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  useEffect(() => {
+    async function loadCourses() {
+      try {
+        const data = await apiFetch("/api/courses", {
+          skipAuth: true,
+        });
+
+        setCourses(data);
+      } catch {
+        setError("Could not load courses.");
+      } finally {
+        setLoadingCourses(false);
+      }
+    }
+
+    loadCourses();
+  }, []);
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
     setError("");
-    setLoading(true);
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (!form.courseId) {
+      setError("Please select a course.");
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
+      await apiFetch("/api/auth/register", {
+        method: "POST",
+        skipAuth: true,
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          courseId: Number(form.courseId),
+          password: form.password,
+          confirmPassword: form.confirmPassword,
+        }),
+      });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Invalid email or password.");
-        }
-        throw new Error(`Login failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.token) {
-        throw new Error("JWT token not received from backend.");
-      }
-
-      saveToken(data.token);
-
-      router.replace("/");
-      router.refresh();
+      router.push("/student/login?registered=1");
     } catch (err) {
       setError(
-        err instanceof TypeError
-          ? "Cannot connect to backend. Check Spring Boot and CORS."
-          : err instanceof Error
-            ? err.message
-            : "Something went wrong."
+        err instanceof Error
+          ? err.message
+          : "Registration failed."
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "12px 14px",
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    fontSize: 14,
+    marginTop: 6,
+  };
+
   return (
-    <main className="auth-wrap">
-      <div className="auth-intro">
-        <span className="auth-icon">
-          <GraduationCapIcon size={30} />
-        </span>
-        <div className="page-eyebrow">WELCOME BACK</div>
-        <h1 className="page-title">Sign in to CampusFlow</h1>
+    <main
+      style={{
+        maxWidth: 500,
+        margin: "50px auto",
+        padding: "0 20px",
+      }}
+    >
+      <div className="surface" style={{ padding: 30 }}>
+        <div className="page-eyebrow">
+          STUDENT PORTAL
+        </div>
+
+        <h1 className="page-title">
+          Create Student Account
+        </h1>
+
         <p className="page-description">
-          Your academic workspace, all in one place.
-        </p>
-      </div>
-
-      <section className="surface auth-card">
-        <h2>Account sign in</h2>
-
-        <p
-          className="muted"
-          style={{ fontSize: 14, marginBottom: 25 }}
-        >
-          Enter your credentials to continue.
+          Register to access your student dashboard.
         </p>
 
         {error && (
-          <p className="notice notice-error" role="alert">
+          <div
+            role="alert"
+            style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 18,
+            }}
+          >
             {error}
-          </p>
+          </div>
         )}
 
-        <form className="form-grid" onSubmit={handleLogin}>
-          <div>
-            <label className="form-label" htmlFor="email">
-              Email address
-            </label>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "grid", gap: 16 }}
+        >
+          <label>
+            Full Name
             <input
-              className="form-input"
-              id="email"
-              type="email"
-              autoComplete="username"
-              placeholder="you@university.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              style={inputStyle}
+              type="text"
               required
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+              placeholder="Enter your full name"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="form-label" htmlFor="password">
-              Password
-            </label>
+          <label>
+            Email Address
+            <input
+              style={inputStyle}
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value })
+              }
+              placeholder="student@example.com"
+            />
+          </label>
 
-            <div className="password-row">
-              <input
-                className="form-input"
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+          <label>
+            Select Course
+            <select
+              style={inputStyle}
+              required
+              disabled={loadingCourses}
+              value={form.courseId}
+              onChange={(e) =>
+                setForm({ ...form, courseId: e.target.value })
+              }
+            >
+              <option value="">
+                {loadingCourses
+                  ? "Loading courses..."
+                  : "Select a course"}
+              </option>
 
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Password
+            <input
+              style={inputStyle}
+              type="password"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={(e) =>
+                setForm({ ...form, password: e.target.value })
+              }
+              placeholder="Enter password"
+            />
+          </label>
+
+          <label>
+            Confirm Password
+            <input
+              style={inputStyle}
+              type="password"
+              required
+              minLength={8}
+              value={form.confirmPassword}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  confirmPassword: e.target.value,
+                })
+              }
+              placeholder="Confirm password"
+            />
+          </label>
 
           <button
             type="submit"
             className="btn-primary"
-            disabled={loading}
-            style={{ width: "100%", marginTop: 6 }}
+            disabled={submitting || loadingCourses}
+            style={{
+              justifyContent: "center",
+              padding: 14,
+            }}
           >
-            {loading ? "Signing in..." : "Sign in →"}
+            {submitting
+              ? "Creating Account..."
+              : "Register"}
           </button>
         </form>
 
-        <p className="auth-footer">
-          CampusFlow · Secure sign in
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: 22,
+            fontSize: 14,
+          }}
+        >
+          Already registered?{" "}
+          <Link href="/student/login">
+            Sign In
+          </Link>
         </p>
-      </section>
-
-      <p style={{ textAlign: "center", marginTop: 24 }}>
-        <Link href="/" className="small-link">
-          ← Return to dashboard
-        </Link>
-      </p>
+      </div>
     </main>
   );
 }
