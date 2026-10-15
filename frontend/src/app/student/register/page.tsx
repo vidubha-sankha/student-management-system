@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import GraduationCapIcon from "@/app/components/GraduationCapIcon";
@@ -32,8 +34,10 @@ export default function StudentRegisterPage() {
     async function fetchCourses() {
       try {
         const res = await fetch(`${API_URL}/api/courses`);
+
         if (res.ok) {
           const data = await res.json();
+
           if (Array.isArray(data) && data.length > 0) {
             setCourses(data);
             setCourseId(data[0].id);
@@ -45,10 +49,11 @@ export default function StudentRegisterPage() {
         setLoadingCourses(false);
       }
     }
-    fetchCourses();
+
+    void fetchCourses();
   }, []);
 
-  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
+  async function handleRegister(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
 
@@ -72,7 +77,9 @@ export default function StudentRegisterPage() {
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim().toLowerCase(),
@@ -83,7 +90,10 @@ export default function StudentRegisterPage() {
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        const errData = await response
+          .json()
+          .catch(() => ({}));
+
         throw new Error(
           errData.message ||
             (response.status === 409
@@ -93,11 +103,16 @@ export default function StudentRegisterPage() {
       }
 
       setSuccess(true);
+
       setTimeout(() => {
         router.push("/student/login");
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to register.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to register."
+      );
     } finally {
       setLoading(false);
     }
@@ -105,41 +120,72 @@ export default function StudentRegisterPage() {
 
   return (
     <main className="auth-wrap">
+      {/* Registration Heading */}
       <div className="auth-intro">
         <span className="auth-icon">
           <GraduationCapIcon size={30} />
         </span>
-        <div className="page-eyebrow">STUDENT PORTAL ENROLLMENT</div>
-        <h1 className="page-title">Register Student Account</h1>
+
+        <div className="page-eyebrow">
+          STUDENT PORTAL ENROLLMENT
+        </div>
+
+        <h1 className="page-title">
+          Register Student Account
+        </h1>
+
         <p className="page-description">
-          Create your academic account to view enrolled modules and profile records.
+          Create your academic account to view enrolled
+          modules and profile records.
         </p>
       </div>
 
+      {/* Registration Form */}
       <section className="surface auth-card">
         <h2>New Student Registration</h2>
-        <p className="muted" style={{ fontSize: 14, marginBottom: 20 }}>
+
+        <p
+          className="muted"
+          style={{
+            fontSize: 14,
+            marginBottom: 20,
+          }}
+        >
           Provide your institutional information to register.
         </p>
 
+        {/* Error Message */}
         {error && (
           <p className="notice notice-error" role="alert">
             {error}
           </p>
         )}
 
+        {/* Success Message */}
         {success && (
-          <div className="notice notice-success" role="alert">
-            <strong>Registration successful!</strong> Redirecting you to sign in...
+          <div
+            className="notice notice-success"
+            role="alert"
+          >
+            <strong>Registration successful!</strong>{" "}
+            Redirecting you to sign in...
           </div>
         )}
 
         {!success && (
-          <form className="form-grid" onSubmit={handleRegister}>
+          <form
+            className="form-grid"
+            onSubmit={handleRegister}
+          >
+            {/* Full Name */}
             <div>
-              <label className="form-label" htmlFor="student-name">
+              <label
+                className="form-label"
+                htmlFor="student-name"
+              >
                 Full Legal Name
               </label>
+
               <input
                 id="student-name"
                 className="form-input"
@@ -151,10 +197,15 @@ export default function StudentRegisterPage() {
               />
             </div>
 
+            {/* Email */}
             <div>
-              <label className="form-label" htmlFor="student-email">
+              <label
+                className="form-label"
+                htmlFor="student-email"
+              >
                 Institutional / Personal Email
               </label>
+
               <input
                 id="student-email"
                 className="form-input"
@@ -167,12 +218,20 @@ export default function StudentRegisterPage() {
               />
             </div>
 
+            {/* Course Selection */}
             <div>
-              <label className="form-label" htmlFor="student-course">
+              <label
+                className="form-label"
+                htmlFor="student-course"
+              >
                 Enrolled Course / Degree Program
               </label>
+
               {loadingCourses ? (
-                <div className="muted" style={{ fontSize: 13 }}>
+                <div
+                  className="muted"
+                  style={{ fontSize: 13 }}
+                >
                   Loading courses from catalog...
                 </div>
               ) : courses.length > 0 ? (
@@ -180,12 +239,17 @@ export default function StudentRegisterPage() {
                   id="student-course"
                   className="form-input"
                   value={courseId}
-                  onChange={(e) => setCourseId(Number(e.target.value))}
+                  onChange={(e) =>
+                    setCourseId(Number(e.target.value))
+                  }
                   required
                 >
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} (ID: {c.id})
+                  {courses.map((course) => (
+                    <option
+                      key={course.id}
+                      value={course.id}
+                    >
+                      {course.name} (ID: {course.id})
                     </option>
                   ))}
                 </select>
@@ -195,22 +259,41 @@ export default function StudentRegisterPage() {
                     id="student-course"
                     className="form-input"
                     type="number"
+                    min={1}
                     placeholder="Enter Course ID (e.g. 1)"
                     value={courseId}
-                    onChange={(e) => setCourseId(Number(e.target.value))}
+                    onChange={(e) =>
+                      setCourseId(
+                        e.target.value === ""
+                          ? ""
+                          : Number(e.target.value)
+                      )
+                    }
                     required
                   />
-                  <small className="muted" style={{ display: "block", marginTop: 4 }}>
+
+                  <small
+                    className="muted"
+                    style={{
+                      display: "block",
+                      marginTop: 4,
+                    }}
+                  >
                     Enter Course ID if course list is unavailable.
                   </small>
                 </div>
               )}
             </div>
 
+            {/* Password */}
             <div>
-              <label className="form-label" htmlFor="student-pass">
+              <label
+                className="form-label"
+                htmlFor="student-pass"
+              >
                 Create Password (Min 8 chars)
               </label>
+
               <div className="password-row">
                 <input
                   id="student-pass"
@@ -219,24 +302,34 @@ export default function StudentRegisterPage() {
                   placeholder="Create secure password"
                   autoComplete="new-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
                   required
                   minLength={8}
                 />
+
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
 
+            {/* Confirm Password */}
             <div>
-              <label className="form-label" htmlFor="student-confirm-pass">
+              <label
+                className="form-label"
+                htmlFor="student-confirm-pass"
+              >
                 Confirm Password
               </label>
+
               <input
                 id="student-confirm-pass"
                 className="form-input"
@@ -244,35 +337,47 @@ export default function StudentRegisterPage() {
                 placeholder="Repeat password"
                 autoComplete="new-password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) =>
+                  setConfirmPassword(e.target.value)
+                }
                 required
               />
             </div>
 
+            {/* Register Button */}
             <button
               type="submit"
               className="btn-primary"
               disabled={loading}
-              style={{ width: "100%", marginTop: 6 }}
+              style={{
+                width: "100%",
+                marginTop: 6,
+              }}
             >
-              {loading ? "Registering account..." : "Complete Registration →"}
+              {loading
+                ? "Registering account..."
+                : "Complete Registration →"}
             </button>
           </form>
         )}
 
-        <div style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
+        {/* Student Login Link */}
+        <div
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            fontSize: 14,
+          }}
+        >
           Already have an account?{" "}
-          <Link href="/student/login" className="small-link">
+          <Link
+            href="/student/login"
+            className="small-link"
+          >
             Sign in here
           </Link>
         </div>
       </section>
-
-      <p style={{ textAlign: "center", marginTop: 24 }}>
-        <Link href="/" className="small-link">
-          ← Return to main portal
-        </Link>
-      </p>
     </main>
   );
 }
