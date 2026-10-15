@@ -1,7 +1,7 @@
 package com.gamage.backend.service;
 
-import com.gamage.backend.dto.StudentRequestDTO;
-import com.gamage.backend.dto.StudentResponseDTO;
+import com.gamage.backend.dto.request.StudentRequestDTO;
+import com.gamage.backend.dto.response.StudentResponseDTO;
 import com.gamage.backend.entity.Course;
 import com.gamage.backend.entity.Student;
 import com.gamage.backend.repository.CourseRepository;

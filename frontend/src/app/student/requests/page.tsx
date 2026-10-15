@@ -1,303 +1,320 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth";
+import { getToken, getUser } from "@/lib/auth";
 
-interface StudentRequest {
-  id: string;
-  type: string;
-  subject: string;
-  priority: "Standard" | "High" | "Urgent";
-  status: "Pending" | "Under Review" | "Approved" | "Rejected";
-  date: string;
-  details: string;
-}
-
-const DEFAULT_REQUESTS: StudentRequest[] = [
-  {
-    id: "REQ-9012",
-    type: "Transcript Request",
-    subject: "Official Semester 1 Transcript for Internship",
-    priority: "High",
-    status: "Approved",
-    date: "2026-10-12",
-    details: "Required by internship sponsor before commencement date.",
-  },
-  {
-    id: "REQ-9045",
-    type: "Course Adjustment",
-    subject: "Elective Module Transfer to Cloud Computing",
-    priority: "Standard",
-    status: "Under Review",
-    date: "2026-10-14",
-    details: "Course schedule adjustment due to project work commitments.",
-  },
-];
+type ChangeField = "name" | "email" | "course";
 
 export default function StudentRequestsPage() {
   const router = useRouter();
-  const [requests, setRequests] = useState<StudentRequest[]>([]);
-  const [filter, setFilter] = useState<string>("ALL");
-  const [showModal, setShowModal] = useState(false);
 
-  // Form states
-  const [type, setType] = useState("Transcript Request");
-  const [subject, setSubject] = useState("");
-  const [priority, setPriority] = useState<"Standard" | "High" | "Urgent">("Standard");
-  const [details, setDetails] = useState("");
-  const [message, setMessage] = useState("");
+  const [field, setField] = useState<ChangeField>("name");
+  const [newValue, setNewValue] = useState("");
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace("/student/login");
-      return;
-    }
+    const token = getToken();
+    const user = getUser();
 
-    try {
-      const stored = localStorage.getItem("campusflow_student_requests");
-      if (stored) {
-        setRequests(JSON.parse(stored));
-      } else {
-        setRequests(DEFAULT_REQUESTS);
-        localStorage.setItem("campusflow_student_requests", JSON.stringify(DEFAULT_REQUESTS));
-      }
-    } catch {
-      setRequests(DEFAULT_REQUESTS);
+    if (!token || user?.role !== "STUDENT") {
+      router.replace("/student/login");
     }
   }, [router]);
 
-  function handleCreateRequest(e: React.FormEvent) {
-    e.preventDefault();
-    if (!subject.trim()) return;
-
-    const newReq: StudentRequest = {
-      id: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
-      type,
-      subject: subject.trim(),
-      priority,
-      status: "Pending",
-      date: new Date().toISOString().split("T")[0],
-      details: details.trim(),
-    };
-
-    const updated = [newReq, ...requests];
-    setRequests(updated);
-    try {
-      localStorage.setItem("campusflow_student_requests", JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-
-    setShowModal(false);
-    setSubject("");
-    setDetails("");
-    setMessage("Request submitted successfully to administration.");
-    setTimeout(() => setMessage(""), 4000);
-  }
-
-  const filtered = requests.filter((r) => {
-    if (filter === "ALL") return true;
-    return r.status.toUpperCase() === filter;
-  });
-
   return (
     <main className="app-page">
+      {/* Page Heading */}
       <div className="page-heading">
         <div>
-          <div className="page-eyebrow">ACADEMIC SERVICES</div>
-          <h1 className="page-title">Student Inquiries & Requests</h1>
+          <div className="page-eyebrow">
+            STUDENT SERVICES
+          </div>
+
+          <h1 className="page-title">
+            Profile Change Requests
+          </h1>
+
           <p className="page-description">
-            Submit formal requests for transcripts, course changes, and institutional letters.
+            Request changes to your student information.
+            Changes require administrator approval.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setShowModal(true)}
+        <Link
+          href="/student/dashboard"
+          className="btn-secondary"
+        >
+          ← Dashboard
+        </Link>
+      </div>
+
+      {/* Centered Request Form */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          width: "100%",
+          marginTop: 36,
+          marginBottom: 36,
+        }}
+      >
+        <section
+          className="surface"
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            padding: "36px",
+            borderRadius: 20,
+            boxShadow:
+              "0 12px 35px rgba(15, 23, 42, 0.06)",
+          }}
+        >
+          {/* Form Heading */}
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: 30,
+            }}
           >
-            + New Request
-          </button>
-          <Link href="/student/dashboard" className="btn-secondary">
-            ← Dashboard
-          </Link>
-        </div>
-      </div>
-
-      {message && <div className="notice notice-success">{message}</div>}
-
-      {/* Filter Tabs */}
-      <div className="tab-list">
-        {["ALL", "PENDING", "UNDER REVIEW", "APPROVED"].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`tab-btn ${filter === tab ? "active" : ""}`}
-            onClick={() => setFilter(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Requests List */}
-      <div className="surface" style={{ padding: 0, overflow: "hidden" }}>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Reference ID</th>
-                <th>Request Type</th>
-                <th>Subject & Notes</th>
-                <th>Submitted Date</th>
-                <th>Priority</th>
-                <th>Current Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length > 0 ? (
-                filtered.map((req) => (
-                  <tr key={req.id}>
-                    <td>
-                      <strong style={{ color: "#4f46e5" }}>{req.id}</strong>
-                    </td>
-                    <td>{req.type}</td>
-                    <td>
-                      <strong>{req.subject}</strong>
-                      {req.details && (
-                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                          {req.details}
-                        </div>
-                      )}
-                    </td>
-                    <td>{req.date}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          req.priority === "Urgent"
-                            ? "badge-danger"
-                            : req.priority === "High"
-                            ? "badge-warning"
-                            : "badge-neutral"
-                        }`}
-                      >
-                        {req.priority}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          req.status === "Approved"
-                            ? "badge-success"
-                            : req.status === "Under Review"
-                            ? "badge-warning"
-                            : "badge-info"
-                        }`}
-                      >
-                        {req.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="empty">
-                    No requests found for this filter.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* New Request Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="section-heading" style={{ marginBottom: 16 }}>
-              <h2>Submit Academic Request</h2>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                style={{ background: "transparent", border: 0, fontSize: 18, color: "#64748b" }}
-              >
-                ✕
-              </button>
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 16,
+                background: "#eef2ff",
+                color: "#4f46e5",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 28,
+                margin: "0 auto 16px",
+              }}
+            >
+              📝
             </div>
 
-            <form className="form-grid" onSubmit={handleCreateRequest}>
-              <div>
-                <label className="form-label">Request Type</label>
-                <select
-                  className="form-input"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                >
-                  <option value="Transcript Request">Official Academic Transcript</option>
-                  <option value="Course Adjustment">Course / Module Adjustment</option>
-                  <option value="Leave of Absence">Leave of Absence</option>
-                  <option value="Recommendation Letter">Letter of Recommendation</option>
-                  <option value="ID Card Replacement">Student ID Card Replacement</option>
-                </select>
-              </div>
+            <h2
+              style={{
+                fontSize: 25,
+                fontWeight: 800,
+                marginBottom: 8,
+              }}
+            >
+              New Change Request
+            </h2>
 
-              <div>
-                <label className="form-label">Subject Line</label>
-                <input
-                  className="form-input"
-                  placeholder="e.g. Request for semester 1 official results"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Priority Level</label>
-                <select
-                  className="form-input"
-                  value={priority}
-                  onChange={(e) =>
-                    setPriority(e.target.value as "Standard" | "High" | "Urgent")
-                  }
-                >
-                  <option value="Standard">Standard (3-5 Business Days)</option>
-                  <option value="High">High (48 Hours)</option>
-                  <option value="Urgent">Urgent (24 Hours)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label">Additional Justification / Details</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  placeholder="Explain why this request is required..."
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                />
-              </div>
-
-              <div className="form-actions" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-                <button
-                  type="button"
-                  className="btn-soft"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Submit Request →
-                </button>
-              </div>
-            </form>
+            <p
+              className="muted"
+              style={{
+                fontSize: 14,
+                lineHeight: 1.6,
+                maxWidth: 440,
+                margin: "0 auto",
+              }}
+            >
+              Fill out the form below to request
+              changes to your student information.
+            </p>
           </div>
-        </div>
-      )}
+
+          {/* Information Notice */}
+          <div
+            style={{
+              background: "#f0f4ff",
+              border: "1px solid #dbe4ff",
+              borderRadius: 12,
+              padding: "14px 16px",
+              marginBottom: 28,
+              fontSize: 13,
+              color: "#475569",
+              lineHeight: 1.6,
+            }}
+          >
+            <strong style={{ color: "#4338ca" }}>
+              Note:
+            </strong>{" "}
+            Request submission is being connected
+            to the backend. No changes will be
+            saved yet.
+          </div>
+
+          {/* Request Form */}
+          <form
+            className="form-grid"
+            style={{
+              display: "grid",
+              gap: 22,
+            }}
+          >
+            {/* Field Selection */}
+            <div>
+              <label
+                className="form-label"
+                htmlFor="change-field"
+              >
+                Field to Change
+              </label>
+
+              <select
+                id="change-field"
+                className="form-input"
+                style={{
+                  width: "100%",
+                  minHeight: 52,
+                }}
+                value={field}
+                onChange={(e) => {
+                  setField(
+                    e.target.value as ChangeField
+                  );
+                  setNewValue("");
+                }}
+              >
+                <option value="name">
+                  Student Name
+                </option>
+
+                <option value="email">
+                  Email Address
+                </option>
+
+                <option value="course">
+                  Registered Course
+                </option>
+              </select>
+            </div>
+
+            {/* New Value */}
+            <div>
+              <label
+                className="form-label"
+                htmlFor="new-value"
+              >
+                New Value
+              </label>
+
+              <input
+                id="new-value"
+                className="form-input"
+                style={{
+                  width: "100%",
+                  minHeight: 52,
+                }}
+                type={
+                  field === "email"
+                    ? "email"
+                    : "text"
+                }
+                placeholder={
+                  field === "name"
+                    ? "Enter your new full name"
+                    : field === "email"
+                      ? "Enter your new email address"
+                      : "Enter your requested course"
+                }
+                value={newValue}
+                onChange={(e) =>
+                  setNewValue(e.target.value)
+                }
+                required
+              />
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label
+                className="form-label"
+                htmlFor="change-reason"
+              >
+                Reason for Change
+              </label>
+
+              <textarea
+                id="change-reason"
+                className="form-input"
+                style={{
+                  width: "100%",
+                  minHeight: 130,
+                  resize: "vertical",
+                  padding: 14,
+                }}
+                placeholder="Explain why you need this change..."
+                value={reason}
+                onChange={(e) =>
+                  setReason(e.target.value)
+                }
+                required
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="button"
+              className="btn-primary"
+              disabled
+              title="Backend integration pending"
+              style={{
+                width: "100%",
+                minHeight: 52,
+                fontSize: 15,
+                fontWeight: 700,
+                borderRadius: 12,
+                marginTop: 4,
+              }}
+            >
+              Submit Change Request →
+            </button>
+          </form>
+        </section>
+      </div>
+
+      {/* Request History */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          width: "100%",
+          marginBottom: 50,
+        }}
+      >
+        <section
+          className="surface"
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            padding: 28,
+            borderRadius: 18,
+          }}
+        >
+          <div className="section-heading">
+            <h2>My Request History</h2>
+          </div>
+
+          <div
+            className="empty"
+            style={{
+              textAlign: "center",
+              padding: "35px 15px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 32,
+                marginBottom: 12,
+              }}
+            >
+              📋
+            </div>
+
+            <p style={{ margin: 0 }}>
+              Request history will appear here
+              after backend integration.
+            </p>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

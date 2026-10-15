@@ -1,6 +1,6 @@
 package com.gamage.backend.controller;
 
-import com.gamage.backend.dto.StudentProfileResponseDTO;
+import com.gamage.backend.dto.response.StudentProfileResponseDTO;
 import com.gamage.backend.service.StudentProfileService;
 
 import org.springframework.http.HttpStatus;

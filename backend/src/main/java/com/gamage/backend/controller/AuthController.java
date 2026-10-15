@@ -1,8 +1,8 @@
 package com.gamage.backend.controller;
 
-import com.gamage.backend.dto.AuthResponse;
-import com.gamage.backend.dto.LoginRequest;
-import com.gamage.backend.dto.RegisterRequestDTO;
+import com.gamage.backend.dto.request.LoginRequest;
+import com.gamage.backend.dto.request.RegisterRequestDTO;
+import com.gamage.backend.dto.response.AuthResponse;
 import com.gamage.backend.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -25,22 +25,19 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(
-            @Valid @RequestBody RegisterRequestDTO request
-    ) {
+            @Valid @RequestBody RegisterRequestDTO request) {
 
         authService.registerStudent(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(Map.of(
-                        "message", "Student registered successfully"
-                ));
+                        "message", "Student registered successfully"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
-            @Valid @RequestBody LoginRequest request
-    ) {
+            @Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 }

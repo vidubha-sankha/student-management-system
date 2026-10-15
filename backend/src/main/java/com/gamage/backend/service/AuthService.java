@@ -1,9 +1,8 @@
 package com.gamage.backend.service;
 
-import com.gamage.backend.dto.AuthResponse;
-import com.gamage.backend.dto.LoginRequest;
-import com.gamage.backend.dto.RegisterRequestDTO;
-
+import com.gamage.backend.dto.request.LoginRequest;
+import com.gamage.backend.dto.request.RegisterRequestDTO;
+import com.gamage.backend.dto.response.AuthResponse;
 import com.gamage.backend.entity.AppUser;
 import com.gamage.backend.entity.Course;
 import com.gamage.backend.entity.Role;

@@ -1,8 +1,8 @@
 package com.gamage.backend.service;
 
-import com.gamage.backend.dto.CourseResponseDTO;
-import com.gamage.backend.dto.StudentRequestDTO;
-import com.gamage.backend.dto.StudentResponseDTO;
+import com.gamage.backend.dto.request.StudentRequestDTO;
+import com.gamage.backend.dto.response.CourseResponseDTO;
+import com.gamage.backend.dto.response.StudentResponseDTO;
 import com.gamage.backend.entity.Course;
 import com.gamage.backend.entity.Student;
 import com.gamage.backend.repository.CourseRepository;
@@ -53,7 +53,8 @@ public class StudentService {
         Long courseId = request.resolvedCourseId();
         if (courseId != null) {
             Course course = courseRepository.findById(courseId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found with id: " + courseId));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Course not found with id: " + courseId));
             student.setCourse(course);
         } else {
             student.setCourse(null);
@@ -78,7 +79,8 @@ public class StudentService {
         Long courseId = request.resolvedCourseId();
         if (courseId != null) {
             Course course = courseRepository.findById(courseId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found with id: " + courseId));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Course not found with id: " + courseId));
             student.setCourse(course);
         } else {
             student.setCourse(null);
