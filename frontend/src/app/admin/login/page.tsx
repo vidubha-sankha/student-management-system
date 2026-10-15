@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { saveToken, saveUser } from "@/lib/auth";
@@ -25,7 +26,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
 
   async function handleLogin(
-    e: React.FormEvent<HTMLFormElement>
+    e: FormEvent<HTMLFormElement>
   ) {
     e.preventDefault();
     setLoading(true);
@@ -83,6 +84,7 @@ export default function AdminLoginPage() {
 
   return (
     <main className="auth-wrap">
+      {/* Admin Login Heading */}
       <div className="auth-intro">
         <span
           className="auth-icon"
@@ -113,6 +115,7 @@ export default function AdminLoginPage() {
         </p>
       </div>
 
+      {/* Admin Authentication Form */}
       <section className="surface auth-card">
         <h2>Administrator Authentication</h2>
 
@@ -139,6 +142,7 @@ export default function AdminLoginPage() {
           className="form-grid"
           onSubmit={handleLogin}
         >
+          {/* Email */}
           <div>
             <label
               className="form-label"
@@ -161,6 +165,7 @@ export default function AdminLoginPage() {
             />
           </div>
 
+          {/* Password */}
           <div>
             <label
               className="form-label"
@@ -199,6 +204,7 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          {/* Sign In Button */}
           <button
             type="submit"
             className="btn-primary"
@@ -217,12 +223,12 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
+        {/* Student Login Link */}
         <div
           style={{
             marginTop: 24,
             paddingTop: 18,
-            borderTop:
-              "1px solid #edf2f7",
+            borderTop: "1px solid #edf2f7",
             textAlign: "center",
             fontSize: 13,
             color: "#64748b",
@@ -237,20 +243,6 @@ export default function AdminLoginPage() {
           </Link>
         </div>
       </section>
-
-      <p
-        style={{
-          textAlign: "center",
-          marginTop: 24,
-        }}
-      >
-        <Link
-          href="/"
-          className="small-link"
-        >
-          ← Return to main portal
-        </Link>
-      </p>
     </main>
   );
 }

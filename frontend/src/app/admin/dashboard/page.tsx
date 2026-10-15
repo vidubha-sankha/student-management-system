@@ -1,9 +1,11 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken, getUser, AuthUser } from "@/lib/auth";
+import { getToken, getUser } from "@/lib/auth";
+import type { AuthUser } from "@/lib/auth";
 import { API_URL } from "@/lib/api";
 
 interface StudentItem {
@@ -22,138 +24,339 @@ interface CourseItem {
   description: string;
 }
 
+interface ChangeRequest {
+  id: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+type ApiStatus = "checking" | "connected" | "offline";
+
 export default function AdminDashboardPage() {
   const router = useRouter();
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  useEffect(() => {
+  const [loading, setLoading] = useState(true);
+  const [apiStatus, setApiStatus] =
+    useState<ApiStatus>("checking");
+  const [error, setError] = useState("");
+
+  const loadData = useCallback(async () => {
     const token = getToken();
+
     if (!token) {
       router.replace("/admin/login");
       return;
     }
 
-    setUser(getUser());
+    setLoading(true);
+    setError("");
+    setApiStatus("checking");
 
-    async function loadData() {
-      try {
-        const [studentsRes, coursesRes] = await Promise.all([
+    try {
+      const [studentsRes, coursesRes, requestsRes] =
+        await Promise.all([
           fetch(`${API_URL}/api/students`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => null),
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }),
+
           fetch(`${API_URL}/api/courses`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => null),
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }),
+
+          fetch(`${API_URL}/api/admin/requests`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }),
         ]);
 
-        if (studentsRes && studentsRes.ok) {
-          const sData = await studentsRes.json();
-          if (Array.isArray(sData)) setStudents(sData);
-        }
-
-        if (coursesRes && coursesRes.ok) {
-          const cData = await coursesRes.json();
-          if (Array.isArray(cData)) setCourses(cData);
-        }
-      } catch (err) {
-        console.warn("Failed loading admin summary:", err);
-      } finally {
-        setLoading(false);
+      if (
+        studentsRes.status === 401 ||
+        coursesRes.status === 401 ||
+        requestsRes.status === 401
+      ) {
+        router.replace("/admin/login");
+        return;
       }
+
+      if (
+        !studentsRes.ok ||
+        !coursesRes.ok ||
+        !requestsRes.ok
+      ) {
+        throw new Error(
+          "Unable to load all dashboard data."
+        );
+      }
+
+      const studentData: StudentItem[] =
+        await studentsRes.json();
+
+      const courseData: CourseItem[] =
+        await coursesRes.json();
+
+      const requestData: ChangeRequest[] =
+        await requestsRes.json();
+
+      if (
+        !Array.isArray(studentData) ||
+        !Array.isArray(courseData) ||
+        !Array.isArray(requestData)
+      ) {
+        throw new Error("Invalid API response.");
+      }
+
+      setStudents(studentData);
+      setCourses(courseData);
+
+      const pending = requestData.filter(
+        (request) => request.status === "PENDING"
+      ).length;
+
+      setPendingCount(pending);
+      setApiStatus("connected");
+    } catch (err) {
+      console.warn(
+        "Failed loading admin dashboard:",
+        err
+      );
+
+      setApiStatus("offline");
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to backend."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const token = getToken();
+    const currentUser = getUser();
+
+    if (!token || currentUser?.role !== "ADMIN") {
+      router.replace("/admin/login");
+      return;
     }
 
-    loadData();
-  }, [router]);
+    setUser(currentUser);
+
+    void loadData();
+  }, [router, loadData]);
 
   return (
     <main className="app-page">
       {/* Top Banner */}
       <div className="page-heading">
         <div>
-          <div className="page-eyebrow" style={{ color: "#0f172a" }}>
+          <div
+            className="page-eyebrow"
+            style={{ color: "#0f172a" }}
+          >
             ADMINISTRATIVE CONTROL PANEL
           </div>
-          <h1 className="page-title">Institution Overview</h1>
+
+          <h1 className="page-title">
+            Institution Overview
+          </h1>
+
           <p className="page-description">
-            Live overview of student enrollments, course catalogs, and academic request queues.
+            Live overview of student enrollments,
+            course catalogs, and academic request queues.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link href="/admin/students" className="btn-primary">
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <Link
+            href="/admin/students"
+            className="btn-primary"
+          >
             + Manage Students
           </Link>
-          <Link href="/admin/courses" className="btn-secondary">
+
+          <Link
+            href="/admin/courses"
+            className="btn-secondary"
+          >
             + Manage Courses
           </Link>
-          <Link href="/admin/requests" className="btn-soft">
+
+          <Link
+            href="/admin/requests"
+            className="btn-soft"
+          >
             View Requests
           </Link>
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div
+          role="alert"
+          style={{
+            background: "#fef2f2",
+            color: "#b91c1c",
+            border: "1px solid #fecaca",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 20,
+          }}
+        >
+          {error}
+
+          <button
+            type="button"
+            className="btn-soft"
+            onClick={() => void loadData()}
+            style={{ marginLeft: 12 }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Metric Cards */}
       <div className="stats-grid">
+        {/* Students */}
         <div className="stat-card">
           <div className="stat-info">
-            <span className="stat-value">{loading ? "..." : students.length}</span>
-            <span className="stat-label">Enrolled Students</span>
+            <span className="stat-value">
+              {loading ? "..." : students.length}
+            </span>
+
+            <span className="stat-label">
+              Enrolled Students
+            </span>
           </div>
+
           <div
             className="stat-icon-wrap"
-            style={{ background: "#e0e7ff", color: "#4338ca" }}
+            style={{
+              background: "#e0e7ff",
+              color: "#4338ca",
+            }}
           >
             👥
           </div>
         </div>
 
+        {/* Courses */}
         <div className="stat-card">
           <div className="stat-info">
-            <span className="stat-value">{loading ? "..." : courses.length}</span>
-            <span className="stat-label">Active Degree Courses</span>
+            <span className="stat-value">
+              {loading ? "..." : courses.length}
+            </span>
+
+            <span className="stat-label">
+              Active Degree Courses
+            </span>
           </div>
+
           <div
             className="stat-icon-wrap"
-            style={{ background: "#dcfce7", color: "#166534" }}
+            style={{
+              background: "#dcfce7",
+              color: "#166534",
+            }}
           >
             📚
           </div>
         </div>
 
+        {/* Pending Requests */}
         <div className="stat-card">
           <div className="stat-info">
-            <span className="stat-value">2</span>
-            <span className="stat-label">Pending Inquiries</span>
+            <span className="stat-value">
+              {loading ? "..." : pendingCount}
+            </span>
+
+            <span className="stat-label">
+              Pending Inquiries
+            </span>
           </div>
+
           <div
             className="stat-icon-wrap"
-            style={{ background: "#fef3c7", color: "#b45309" }}
+            style={{
+              background: "#fef3c7",
+              color: "#b45309",
+            }}
           >
             ⏳
           </div>
         </div>
 
+        {/* Backend Status */}
         <div className="stat-card">
           <div className="stat-info">
-            <span className="stat-value">100%</span>
-            <span className="stat-label">API Gateway Status</span>
+            <span
+              className="stat-value"
+              style={{
+                fontSize: 23,
+                color:
+                  apiStatus === "connected"
+                    ? "#166534"
+                    : apiStatus === "offline"
+                      ? "#b91c1c"
+                      : "#0f172a",
+              }}
+            >
+              {apiStatus === "connected"
+                ? "Online"
+                : apiStatus === "offline"
+                  ? "Offline"
+                  : "Checking"}
+            </span>
+
+            <span className="stat-label">
+              API Connection Status
+            </span>
           </div>
+
           <div
             className="stat-icon-wrap"
-            style={{ background: "#f1f5f9", color: "#0f172a" }}
+            style={{
+              background: "#f1f5f9",
+              color: "#0f172a",
+            }}
           >
             ⚡
           </div>
         </div>
       </div>
 
-      {/* Main Sections */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24 }}>
-        {/* Recent Student Registrations */}
-        <section className="surface" style={{ padding: 0, overflow: "hidden" }}>
+      {/* Main Dashboard Sections */}
+      <div className="admin-dashboard-grid">
+        {/* Recent Student Enrollments */}
+        <section
+          className="surface"
+          style={{
+            padding: 0,
+            overflow: "hidden",
+            minWidth: 0,
+          }}
+        >
           <div
             style={{
               padding: "20px 24px",
@@ -161,44 +364,117 @@ export default function AdminDashboardPage() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
             }}
           >
-            <h2 style={{ fontSize: 18, margin: 0, fontWeight: 800 }}>Recent Enrollments</h2>
-            <Link href="/admin/students" className="small-link">
+            <h2
+              style={{
+                fontSize: 18,
+                margin: 0,
+                fontWeight: 800,
+              }}
+            >
+              Recent Enrollments
+            </h2>
+
+            <Link
+              href="/admin/students"
+              className="small-link"
+            >
               View All ({students.length}) →
             </Link>
           </div>
 
           <div className="table-scroll">
-            <table className="data-table">
+            <table
+              className="data-table"
+              style={{
+                width: "100%",
+                tableLayout: "auto",
+              }}
+            >
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Email</th>
-                  <th>Assigned Course</th>
+                  <th style={{ width: "25%" }}>
+                    Student
+                  </th>
+
+                  <th style={{ width: "43%" }}>
+                    Email
+                  </th>
+
+                  <th style={{ width: "32%" }}>
+                    Assigned Course
+                  </th>
                 </tr>
               </thead>
+
               <tbody>
-                {students.slice(0, 5).map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <strong>{s.name}</strong>
-                    </td>
-                    <td className="muted">{s.email}</td>
-                    <td>
-                      {s.course ? (
-                        <span className="pill">{s.course.name}</span>
-                      ) : (
-                        <span className="muted" style={{ fontSize: 13 }}>
-                          Unassigned
-                        </span>
-                      )}
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="empty"
+                    >
+                      Loading students...
                     </td>
                   </tr>
-                ))}
-                {students.length === 0 && !loading && (
+                ) : students.length > 0 ? (
+                  students.slice(0, 6).map((student) => (
+                    <tr key={student.id}>
+                      <td>
+                        <strong
+                          style={{
+                            fontSize: 13,
+                            color: "#0f172a",
+                          }}
+                        >
+                          {student.name}
+                        </strong>
+                      </td>
+
+                      <td
+                        className="muted"
+                        style={{
+                          fontSize: 13,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {student.email}
+                      </td>
+
+                      <td>
+                        {student.course ? (
+                          <span
+                            className="pill"
+                            style={{
+                              fontSize: 11,
+                              display: "inline-block",
+                              maxWidth: "100%",
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {student.course.name}
+                          </span>
+                        ) : (
+                          <span
+                            className="muted"
+                            style={{ fontSize: 12 }}
+                          >
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
                   <tr>
-                    <td colSpan={3} className="empty">
+                    <td
+                      colSpan={3}
+                      className="empty"
+                    >
                       No students enrolled yet.
                     </td>
                   </tr>
@@ -208,56 +484,153 @@ export default function AdminDashboardPage() {
           </div>
         </section>
 
-        {/* Quick Admin Actions & Courses Overview */}
-        <section className="surface">
-          <div className="section-heading">
-            <h2>Course Catalog Quick View</h2>
-            <Link href="/admin/courses" className="small-link">
-              Manage Catalog →
+        {/* Compact Course Catalog */}
+        <section
+          className="surface"
+          style={{
+            minWidth: 0,
+            padding: 20,
+          }}
+        >
+          <div
+            className="section-heading"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <h2 style={{ fontSize: 18 }}>
+              Course Catalog
+            </h2>
+
+            <Link
+              href="/admin/courses"
+              className="small-link"
+            >
+              Manage →
             </Link>
           </div>
 
-          <div style={{ display: "grid", gap: 12 }}>
-            {courses.slice(0, 4).map((c) => (
-              <div
-                key={c.id}
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  border: "1px solid #edf2f7",
-                  background: "#fafbff",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <strong style={{ display: "block", fontSize: 15, color: "#0f172a" }}>
-                    {c.name}
-                  </strong>
-                  <span className="muted" style={{ fontSize: 13 }}>
-                    {c.description || "Active Academic Program"}
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            {loading ? (
+              <div className="empty">
+                Loading courses...
+              </div>
+            ) : courses.length > 0 ? (
+              courses.slice(0, 4).map((course) => (
+                <div
+                  key={course.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #edf2f7",
+                    background: "#fafbff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: 13,
+                        color: "#0f172a",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {course.name}
+                    </strong>
+
+                    <span
+                      className="muted"
+                      style={{
+                        fontSize: 11,
+                        display: "block",
+                        marginTop: 3,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {course.description ||
+                        "Active Academic Program"}
+                    </span>
+                  </div>
+
+                  <span
+                    className="badge badge-info"
+                    style={{
+                      flexShrink: 0,
+                      fontSize: 11,
+                    }}
+                  >
+                    #{course.id}
                   </span>
                 </div>
-                <span className="badge badge-info">ID #{c.id}</span>
+              ))
+            ) : (
+              <div className="empty">
+                No courses in catalogue.
               </div>
-            ))}
-            {courses.length === 0 && !loading && (
-              <div className="empty">No courses in catalogue.</div>
             )}
           </div>
 
-          <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid #edf2f7" }}>
+          {/* Pending Requests Link */}
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 16,
+              borderTop: "1px solid #edf2f7",
+            }}
+          >
             <Link
               href="/admin/requests"
               className="btn-soft"
-              style={{ width: "100%", justifyContent: "center" }}
+              style={{
+                width: "100%",
+                justifyContent: "center",
+                textAlign: "center",
+                fontSize: 12,
+              }}
             >
-              Review Student Request Queue (2 Pending) →
+              Review Requests ({pendingCount} Pending) →
             </Link>
           </div>
         </section>
       </div>
+
+      {/* Responsive Grid Styles */}
+      <style jsx>{`
+        .admin-dashboard-grid {
+          display: grid;
+          grid-template-columns:
+            minmax(0, 2fr) minmax(0, 1fr);
+          gap: 24px;
+          align-items: start;
+        }
+
+        @media (max-width: 1100px) {
+          .admin-dashboard-grid {
+            grid-template-columns:
+              minmax(0, 1.5fr) minmax(0, 1fr);
+            gap: 18px;
+          }
+        }
+
+        @media (max-width: 800px) {
+          .admin-dashboard-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </main>
   );
 }

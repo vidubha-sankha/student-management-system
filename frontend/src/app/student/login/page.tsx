@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import GraduationCapIcon from "@/app/components/GraduationCapIcon";
@@ -16,7 +18,7 @@ export default function StudentLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -24,7 +26,9 @@ export default function StudentLoginPage() {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
@@ -45,7 +49,14 @@ export default function StudentLoginPage() {
         throw new Error("JWT token not received from server");
       }
 
+      if (data.role !== "STUDENT") {
+        throw new Error(
+          "This account is not a student account. Please use Admin Sign In."
+        );
+      }
+
       saveToken(data.token);
+
       saveUser({
         id: data.userId,
         name: data.name,
@@ -56,7 +67,11 @@ export default function StudentLoginPage() {
       router.replace("/student/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to sign in.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in."
+      );
     } finally {
       setLoading(false);
     }
@@ -64,20 +79,37 @@ export default function StudentLoginPage() {
 
   return (
     <main className="auth-wrap">
+      {/* Login Heading */}
       <div className="auth-intro">
         <span className="auth-icon">
           <GraduationCapIcon size={30} />
         </span>
-        <div className="page-eyebrow">CAMPUSFLOW STUDENT ACCESS</div>
-        <h1 className="page-title">Sign in to Student Portal</h1>
+
+        <div className="page-eyebrow">
+          CAMPUSFLOW STUDENT ACCESS
+        </div>
+
+        <h1 className="page-title">
+          Sign in to Student Portal
+        </h1>
+
         <p className="page-description">
-          Enter your academic credentials to access modules and records.
+          Enter your academic credentials to access
+          modules and records.
         </p>
       </div>
 
+      {/* Login Form */}
       <section className="surface auth-card">
         <h2>Student Authentication</h2>
-        <p className="muted" style={{ fontSize: 14, marginBottom: 20 }}>
+
+        <p
+          className="muted"
+          style={{
+            fontSize: 14,
+            marginBottom: 20,
+          }}
+        >
           Enter your registered student email and password.
         </p>
 
@@ -87,11 +119,19 @@ export default function StudentLoginPage() {
           </p>
         )}
 
-        <form className="form-grid" onSubmit={handleLogin}>
+        <form
+          className="form-grid"
+          onSubmit={handleLogin}
+        >
+          {/* Email */}
           <div>
-            <label className="form-label" htmlFor="student-login-email">
+            <label
+              className="form-label"
+              htmlFor="student-login-email"
+            >
               Student Email
             </label>
+
             <input
               id="student-login-email"
               className="form-input"
@@ -104,10 +144,15 @@ export default function StudentLoginPage() {
             />
           </div>
 
+          {/* Password */}
           <div>
-            <label className="form-label" htmlFor="student-login-password">
+            <label
+              className="form-label"
+              htmlFor="student-login-password"
+            >
               Password
             </label>
+
             <div className="password-row">
               <input
                 id="student-login-password"
@@ -119,33 +164,53 @@ export default function StudentLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+
               <button
                 type="button"
                 className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </div>
 
+          {/* Login Button */}
           <button
             type="submit"
             className="btn-primary"
             disabled={loading}
-            style={{ width: "100%", marginTop: 8 }}
+            style={{
+              width: "100%",
+              marginTop: 8,
+            }}
           >
-            {loading ? "Authenticating..." : "Sign In to Dashboard →"}
+            {loading
+              ? "Authenticating..."
+              : "Sign In to Dashboard →"}
           </button>
         </form>
 
-        <div style={{ marginTop: 24, textAlign: "center", fontSize: 14 }}>
+        {/* Register Link */}
+        <div
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            fontSize: 14,
+          }}
+        >
           Don&apos;t have an account yet?{" "}
-          <Link href="/student/register" className="small-link">
+          <Link
+            href="/student/register"
+            className="small-link"
+          >
             Register as a student
           </Link>
         </div>
 
+        {/* Admin Login Link */}
         <div
           style={{
             marginTop: 18,
@@ -157,17 +222,14 @@ export default function StudentLoginPage() {
           }}
         >
           Staff or Administrator?{" "}
-          <Link href="/admin/login" className="small-link">
+          <Link
+            href="/admin/login"
+            className="small-link"
+          >
             Admin Sign In
           </Link>
         </div>
       </section>
-
-      <p style={{ textAlign: "center", marginTop: 24 }}>
-        <Link href="/" className="small-link">
-          ← Return to main portal
-        </Link>
-      </p>
     </main>
   );
 }
