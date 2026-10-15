@@ -25,34 +25,41 @@ public class SecurityConfig {
                         JwtAuthenticationFilter jwtFilter) throws Exception {
 
                 http
+                                // Enable CORS
                                 .cors(Customizer.withDefaults())
 
+                                // Disable CSRF for JWT-based REST API
                                 .csrf(csrf -> csrf.disable())
 
+                                // Stateless authentication
                                 .sessionManagement(session -> session.sessionCreationPolicy(
                                                 SessionCreationPolicy.STATELESS))
 
+                                // Handle unauthorized and forbidden requests
                                 .exceptionHandling(ex -> ex
+
                                                 .authenticationEntryPoint(
                                                                 (request, response, authException) -> response
                                                                                 .sendError(
                                                                                                 HttpStatus.UNAUTHORIZED
                                                                                                                 .value()))
+
                                                 .accessDeniedHandler(
                                                                 (request, response, accessDeniedException) -> response
                                                                                 .sendError(
                                                                                                 HttpStatus.FORBIDDEN
                                                                                                                 .value())))
 
+                                // API Security Rules
                                 .authorizeHttpRequests(auth -> auth
 
-                                                // Public registration and login
+                                                // PUBLIC: Student registration and login
                                                 .requestMatchers(
                                                                 "/api/auth/register",
                                                                 "/api/auth/login")
                                                 .permitAll()
 
-                                                // Allow CORS preflight requests
+                                                // PUBLIC: CORS preflight requests
                                                 .requestMatchers(
                                                                 HttpMethod.OPTIONS,
                                                                 "/**")
@@ -83,25 +90,30 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/students/**")
                                                 .hasRole("ADMIN")
 
-                                                // PUBLIC: Read courses without login
+                                                // PUBLIC: Read course information
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
                                                                 "/api/courses",
                                                                 "/api/courses/**")
                                                 .permitAll()
 
-                                                // STUDENT ONLY: Student profile and features
+                                                // ADMIN ONLY: Change requests and admin features
+                                                .requestMatchers("/api/admin/**")
+                                                .hasRole("ADMIN")
+
+                                                // STUDENT ONLY: Student profile and requests
                                                 .requestMatchers("/api/student/**")
                                                 .hasRole("STUDENT")
 
-                                                // Allow Spring Boot error responses
+                                                // PUBLIC: Spring Boot error responses
                                                 .requestMatchers("/error")
                                                 .permitAll()
 
-                                                // All other endpoints require authentication
+                                                // All other endpoints require login
                                                 .anyRequest()
                                                 .authenticated())
 
+                                // Add JWT authentication filter
                                 .addFilterBefore(
                                                 jwtFilter,
                                                 UsernamePasswordAuthenticationFilter.class);
@@ -114,11 +126,13 @@ public class SecurityConfig {
 
                 CorsConfiguration configuration = new CorsConfiguration();
 
+                // Allowed frontend origins
                 configuration.setAllowedOriginPatterns(
                                 List.of(
                                                 "http://localhost:[*]",
                                                 "http://127.0.0.1:[*]"));
 
+                // Allowed HTTP methods
                 configuration.setAllowedMethods(
                                 List.of(
                                                 "GET",
@@ -128,9 +142,11 @@ public class SecurityConfig {
                                                 "OPTIONS",
                                                 "PATCH"));
 
+                // Allowed request headers
                 configuration.setAllowedHeaders(
                                 List.of("*"));
 
+                // Allow credentials
                 configuration.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
